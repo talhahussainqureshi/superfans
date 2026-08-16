@@ -130,3 +130,7 @@ not the star rating itself.
   4 or higher, so "Others" means positive-but-not-Super-Fan reviewers, not
   unhappy customers — this is a comparison within already-satisfied
   customers, not satisfied vs. dissatisfied.
+
+## License
+
+[MIT](LICENSE)
