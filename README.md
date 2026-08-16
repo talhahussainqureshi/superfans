@@ -15,6 +15,7 @@ labeled sentiment share; reviews scoring `>= 0.75` are flagged as Super-Fans.
 ├── data/raw/                   # source .xlsx exports (not generated, keep as-is)
 ├── data/processed/             # generated CSVs + cleaned REWE cache (safe to delete)
 ├── output/dashboard/           # generated HTML dashboard (safe to delete)
+├── results/                    # generated PNG charts, tracked in git (see Key Findings)
 ├── docs/                       # term paper documents
 ├── unrelated-rf-simulation/    # unrelated 5G/RF signal script, not part of this pipeline
 └── requirements.txt
@@ -75,3 +76,57 @@ REWE export changes and needs re-cleaning.
 - "Others" means 4-5 star reviewers who scored below the 0.75 Super-Fan
   threshold, not negative reviewers — the dataset is pre-filtered to
   `rating >= 4` before the Super-Fan split.
+
+## Key Findings
+
+Based on 3,061 REWE and 2,707 EDEKA reviews with a rating of 4 or higher.
+
+**Super-Fan rate.** 72.5% of qualifying REWE reviewers (2,220 of 3,061) and
+75.5% of qualifying EDEKA reviewers (2,044 of 2,707) cross the 0.75
+Super-Fan threshold.
+
+![Super-Fans vs Others by brand](results/01_superfan_counts.png)
+
+**What separates Super-Fans by theme.** For both brands, the themes most
+disproportionately mentioned by Super-Fans (vs. Others) are **Service**,
+**Freundlichkeit** (friendliness), and **Sauberkeit** (cleanliness) — staff
+and store experience drive Super-Fan status more than product range or price.
+
+![Top lift themes by brand](results/02_top_lift_themes.png)
+
+**What separates Super-Fans by language.** A text-only model (independent of
+the score's own inputs) finds hedging/qualifying words — *leider*
+(unfortunately), *aber* (but), *jedoch*/*allerdings* (however), *nicht*
+(not), *nur* (only) — are the strongest signals of a review belonging to
+"Others" rather than a Super-Fan, even though both groups gave 4-5 stars.
+In other words, Others tend to soften a positive rating with a caveat;
+Super-Fans state the positive without qualification.
+
+![Top predictive words](results/03_top_predictive_words.png)
+
+**Rating vs. sentiment gap.** Super-Fans and Others are close on star rating
+alone (both mostly 4-5 stars, by construction), but diverge much more on
+free-text sentiment (VADER) and positive-label share — the score's weighting
+toward sentiment (60%) over rating (40%) is what separates the two groups,
+not the star rating itself.
+
+![Mean rating and sentiment comparison](results/04_mean_comparison.png)
+
+## Limitations
+
+- **Definitional threshold.** The 0.75 Super-Fan cutoff and the
+  40/35/25 rating/pos_share/vader weighting are manually chosen, not fit or
+  validated against an external ground truth (e.g. actual repeat-purchase or
+  loyalty-program data) — a different threshold or weighting would shift the
+  ~72-75% Super-Fan rate reported above.
+- **Language detection on short text.** `langdetect` is less reliable on
+  short reviews, so some misclassified-language reviews may be silently
+  dropped (only `en`/`de` are kept).
+- **VADER is English-tuned.** Sentiment scores for German-language reviews
+  come from an English sentiment lexicon; German negation and hedging words
+  (as surfaced in the predictive-words chart above) aren't scored the way a
+  German-native sentiment model would.
+- **Pre-filtered baseline.** The whole analysis only considers reviews rated
+  4 or higher, so "Others" means positive-but-not-Super-Fan reviewers, not
+  unhappy customers — this is a comparison within already-satisfied
+  customers, not satisfied vs. dissatisfied.

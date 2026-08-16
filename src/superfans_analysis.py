@@ -22,6 +22,9 @@ import webbrowser
 from collections import Counter
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")  # render to file only, no GUI backend needed
+import matplotlib.pyplot as plt
 import nltk
 import pandas as pd
 from langdetect import DetectorFactory, detect
@@ -54,6 +57,7 @@ DATA_RAW = BASE_DIR / "data" / "raw"
 DATA_PROCESSED = BASE_DIR / "data" / "processed"
 OUTPUT_DIR = BASE_DIR / "output"
 DASH_DIR = OUTPUT_DIR / "dashboard"
+RESULTS_DIR = BASE_DIR / "results"  # tracked in git: static charts for viewing on GitHub
 
 RAW_REWE = DATA_RAW / "rewe_store_reviews_main_topic.xlsx"
 CLEAN_REWE = DATA_PROCESSED / "rewe_en.xlsx"
@@ -63,6 +67,7 @@ PORT = 8000
 
 DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 DASH_DIR.mkdir(parents=True, exist_ok=True)
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── helpers ───────────────────────────────────────────────────────
 _lang_cache: dict[str, str] = {}
@@ -230,6 +235,72 @@ def top_predictive_words(df: pd.DataFrame, top_n: int = 15) -> pd.Series:
     return coef.reindex(coef.abs().sort_values(ascending=False).index).head(top_n).round(2)
 
 
+# ── static chart export (tracked in git, visible on GitHub) ───────
+def export_static_charts(all_df: pd.DataFrame, summary: pd.DataFrame, top_words: pd.Series) -> None:
+    """Render a handful of PNG charts to results/ so findings are visible on
+    GitHub without cloning and running the dashboard."""
+    plt.rcParams.update({"figure.dpi": 120, "font.size": 10})
+
+    # 01: Super-Fans vs Others per brand
+    counts = (
+        all_df.groupby(["brand", "is_superfan"]).size().unstack(fill_value=0)
+        .rename(columns={True: "Super-Fans", False: "Others"})
+    )
+    ax = counts.plot(kind="bar", color=["#4e79a7", "#f28e2b"], figsize=(6, 4))
+    ax.set_title("Super-Fans vs Others by Brand")
+    ax.set_xlabel("")
+    ax.set_ylabel("Reviews (rating >= 4)")
+    ax.tick_params(axis="x", rotation=0)
+    plt.tight_layout()
+    plt.savefig(RESULTS_DIR / "01_superfan_counts.png")
+    plt.close()
+
+    # 02: top lift themes, REWE and EDEKA side by side
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5))
+    for ax, brand in zip(axes, ["rewe", "edeka"]):
+        lift = (lift_series(all_df, brand, top_n=8) * 100).sort_values()
+        ax.barh(lift.index, lift.values, color="#59a14f")
+        ax.set_title(f"{brand.capitalize()}: themes over-represented among Super-Fans")
+        ax.set_xlabel("Lift vs Others (percentage points)")
+    plt.tight_layout()
+    plt.savefig(RESULTS_DIR / "02_top_lift_themes.png")
+    plt.close()
+
+    # 03: top predictive words (TF-IDF logistic regression coefficients)
+    if not top_words.empty:
+        ordered = top_words.sort_values()
+        colors = ["#e15759" if v < 0 else "#59a14f" for v in ordered.values]
+        fig, ax = plt.subplots(figsize=(7, 6))
+        ax.barh(ordered.index, ordered.values, color=colors)
+        ax.axvline(0, color="black", linewidth=0.8)
+        ax.set_title("Words most predictive of Super-Fan status")
+        ax.set_xlabel("Logistic regression coefficient (text-only model)")
+        plt.tight_layout()
+        plt.savefig(RESULTS_DIR / "03_top_predictive_words.png")
+        plt.close()
+
+    # 04: mean rating / sentiment, Super-Fans vs Others
+    # Plotted on normalized 0-1 columns (rating_n, vader_n, pos_share) rather than
+    # raw `rating` (0-5) and `vader` (-1 to 1) — mixing those scales on one axis
+    # makes the sentiment bars nearly invisible next to the rating bar.
+    normalized = (
+        all_df.groupby("is_superfan")[["rating_n", "vader_n", "pos_share"]]
+        .mean()
+        .rename(index={True: "Super-Fans", False: "Others"})
+        .rename(columns={"rating_n": "rating (0-1)", "vader_n": "sentiment (0-1)", "pos_share": "pos_share"})
+        .round(3)
+    )
+    ax = normalized.plot(kind="bar", figsize=(6, 4), color=["#4e79a7", "#f28e2b", "#76b7b2"])
+    ax.set_title("Mean rating / sentiment: Super-Fans vs Others (normalized 0-1)")
+    ax.tick_params(axis="x", rotation=0)
+    ax.set_ylim(0, 1)
+    plt.tight_layout()
+    plt.savefig(RESULTS_DIR / "04_mean_comparison.png")
+    plt.close()
+
+    log.info("Static charts -> %s", RESULTS_DIR)
+
+
 # ── Chart.js helper ──────────────────────────────────────────────
 def chart_js(
     cid: str,
@@ -288,6 +359,7 @@ def main() -> None:
     )
 
     top_words = top_predictive_words(all_df)
+    export_static_charts(all_df, summary, top_words)
 
     # ── HTML skeleton ──────────────────────────────────────────────
     html = """<!DOCTYPE html>
