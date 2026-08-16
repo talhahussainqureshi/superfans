@@ -301,6 +301,21 @@ def export_static_charts(all_df: pd.DataFrame, summary: pd.DataFrame, top_words:
     log.info("Static charts -> %s", RESULTS_DIR)
 
 
+def export_results_xlsx(all_df: pd.DataFrame) -> None:
+    """Write the identified Super-Fans (one sheet per brand) to results/,
+    tracked in git so the results are downloadable directly from GitHub."""
+    cols = ["review", "city", "theme", "rating", "vader", "pos_share", "sf_score"]
+    path = RESULTS_DIR / "superfans_results.xlsx"
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        for brand in ["rewe", "edeka"]:
+            subset = (
+                all_df.loc[(all_df["brand"] == brand) & (all_df["is_superfan"]), cols]
+                .sort_values("sf_score", ascending=False)
+            )
+            subset.to_excel(writer, sheet_name=brand, index=False)
+    log.info("Results workbook -> %s", path)
+
+
 # ── Chart.js helper ──────────────────────────────────────────────
 def chart_js(
     cid: str,
@@ -360,6 +375,7 @@ def main() -> None:
 
     top_words = top_predictive_words(all_df)
     export_static_charts(all_df, summary, top_words)
+    export_results_xlsx(all_df)
 
     # ── HTML skeleton ──────────────────────────────────────────────
     html = """<!DOCTYPE html>

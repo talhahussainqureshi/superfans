@@ -45,15 +45,20 @@ Press Enter in the terminal to stop the server.
 
 ## Results
 
+- [`results/superfans_results.xlsx`](results/superfans_results.xlsx) —
+  **the results, tracked in git**: an Excel workbook with a `rewe` sheet and
+  an `edeka` sheet, each listing only the identified Super-Fans, sorted
+  strongest first by `sf_score`. Regenerated on every run; download it
+  directly from GitHub without cloning or running anything.
 - `data/processed/rewe_superfans.csv`, `data/processed/edeka_superfans.csv` —
-  **the results**: only the reviews identified as Super-Fans, one row each,
-  sorted strongest first by `sf_score`.
+  the same Super-Fan-only results as CSV (gitignored, local only).
 - `data/processed/rewe_4plus_reviews.csv`, `data/processed/edeka_4plus_reviews.csv`
   — every review with rating ≥ 4 (Super-Fans and Others), with the
-  `is_superfan` flag, for anyone who wants the full comparison set.
+  `is_superfan` flag, for anyone who wants the full comparison set
+  (gitignored, local only).
 
-All CSVs use decimal commas (`0,928`) and 3 decimal places, matching a
-German-locale Excel.
+The CSVs use decimal commas (`0,928`) and 3 decimal places, matching a
+German-locale Excel; the .xlsx workbook uses plain numeric cells.
 
 ## Data
 
