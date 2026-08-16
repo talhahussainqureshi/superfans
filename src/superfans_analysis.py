@@ -180,8 +180,17 @@ def process_brand(brand: str, df: pd.DataFrame) -> pd.DataFrame:
     export_cols = ["review", "city", "theme", "rating", "vader", "pos_share", "sf_score", "is_superfan"]
     grouped[export_cols].to_csv(DATA_PROCESSED / f"{brand}_4plus_reviews.csv", **CSV_OPTS)
 
+    # dedicated results file: identified Super-Fans only, strongest first
+    results_cols = ["review", "city", "theme", "rating", "vader", "pos_share", "sf_score"]
+    superfans = (
+        grouped.loc[grouped["is_superfan"], results_cols]
+        .sort_values("sf_score", ascending=False)
+    )
+    superfans.to_csv(DATA_PROCESSED / f"{brand}_superfans.csv", **CSV_OPTS)
+
     sf, other = grouped["is_superfan"].value_counts().reindex([True, False], fill_value=0)
     log.info("%s: %d Super-Fans, %d Others saved", brand, sf, other)
+    log.info("%s: Super-Fan results -> %s_superfans.csv", brand, brand)
     return grouped
 
 

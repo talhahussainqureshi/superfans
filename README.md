@@ -42,6 +42,18 @@ This regenerates `data/processed/*.csv` and `output/dashboard/index.html`,
 starts a local server, and opens the dashboard at `http://localhost:8000/`.
 Press Enter in the terminal to stop the server.
 
+## Results
+
+- `data/processed/rewe_superfans.csv`, `data/processed/edeka_superfans.csv` —
+  **the results**: only the reviews identified as Super-Fans, one row each,
+  sorted strongest first by `sf_score`.
+- `data/processed/rewe_4plus_reviews.csv`, `data/processed/edeka_4plus_reviews.csv`
+  — every review with rating ≥ 4 (Super-Fans and Others), with the
+  `is_superfan` flag, for anyone who wants the full comparison set.
+
+All CSVs use decimal commas (`0,928`) and 3 decimal places, matching a
+German-locale Excel.
+
 ## Data
 
 `src/superfans_analysis.py` expects two files in `data/raw/`:
